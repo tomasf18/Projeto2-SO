@@ -53,7 +53,7 @@ typedef struct
 
     /** \brief number of groups */
     int nGroups;
-    /** \brief number of groups waiting for table -> nº de grupos que estão à espera */
+    /** \brief number of groups waiting for table */
     int groupsWaiting;
 
     /** \brief estimated start time of groups */

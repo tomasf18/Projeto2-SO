@@ -109,26 +109,30 @@ int main (int argc, char *argv[])
     /* initialize random generator */
     srandom ((unsigned int) getpid ());              
 
-    /* initialize internal receptionist memory */
+
+    /* initialize internal receptionist memory -> Coloca todos os grupos como "a chegar" */
     int g;
-    for (g=0; g < sh->fSt.nGroups; g++) {
+    for (g = 0; g < sh->fSt.nGroups; g++) {
        groupRecord[g] = TOARRIVE;
     }
 
-    /* simulation of the life cycle of the receptionist */
-    int nReq=0;
+    /* simulation of the life cycle of the receptionist -> -> Indica o que o Receptionist vai fazer */
+    int nReq = 0;
     request req;
-    while( nReq < sh->fSt.nGroups*2 ) {
-        req = waitForGroup();
+    /* Enquanto o nº de requests for inferior ao máximo de requests possível para o Receptionist, executa este loop */
+    while( nReq < sh->fSt.nGroups*2 ) {     // nGroups (5) * 2 (requests feitos por Groups, um para mesa, outro para pagamento) = nTotalRequests
+        req = waitForGroup();               // Receptionist ouve o pedido do Grupo
         switch(req.reqType) {
+            /* Se for um pedido de mesa, então atribui-lhes uma mesa, assim que possível */
             case TABLEREQ:
                    provideTableOrWaitingRoom(req.reqGroup); //TODO param should be groupid
                    break;
             case BILLREQ:
+            /* Se for um pedido para pagamento, então recebe-o */
                    receivePayment(req.reqGroup);
                    break;
         }
-        nReq++;
+        nReq++; // Incrementa o nº de pedidos
     }
 
     /* unmapping the shared region off the process address space */
@@ -230,6 +234,11 @@ static void provideTableOrWaitingRoom (int n)
         exit (EXIT_FAILURE);
     }
 
+    /* Rececionista atualiza o seu estado para "a atribuir mesa ao grupo n" */
+    sh->fSt.st.receptionistStat = ASSIGNTABLE;
+    saveState(nFic, &sh->fSt);
+
+    // GROUPSWAITING (sh)
     // TODO insert your code here
 
     if (semUp (semgid, sh->mutex) == -1) {                                               /* exit critical region */
