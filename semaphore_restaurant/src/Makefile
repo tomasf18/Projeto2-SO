@@ -20,6 +20,8 @@ wt:		    group_bin     waiter      chef_bin   receptionist_bin main clean
 ch:		    group_bin     waiter_bin  chef       receptionist_bin main clean
 rt:		    group_bin     waiter_bin  chef_bin   receptionist     main clean
 ch_wt: 		group_bin     waiter  chef       receptionist_bin main clean
+ch_wt_gr: 	group     waiter  chef       receptionist_bin main clean
+
 all_bin:	group_bin     waiter_bin  chef_bin   receptionist_bin main clean
 
 chef:	$(CHEF).o $(OBJS)

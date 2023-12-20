@@ -189,7 +189,7 @@ static void eat (int id)
  *
  *  \param id group id
  *
- *  \return true if first group, false otherwise
+ *  \return true if first group, false otherwise  ??????
  */
 static void checkInAtReception(int id)
 {
