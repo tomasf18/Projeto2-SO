@@ -371,6 +371,11 @@ static void receivePayment (int n)
     /* E, se existirem, atribui-se ao próximo Grupo a mesa que acabou de ser disponibilizada, e diminui-se o nº de grupos à espera */
     if (nextGroup != -1) {
         sh->fSt.assignedTable[nextGroup] = assignedTable;
+        /* Avisar o grupo que podem ir para a mesa (podem deixar de esperar pela mesa) */
+        if (semUp(semgid, sh->waitForTable[nextGroup]) == -1) {                                         
+            perror ("error on the down operation for semaphore access (WT)");
+            exit (EXIT_FAILURE);
+        }
         groupRecord[nextGroup] = ATTABLE;
         sh->fSt.groupsWaiting--;
     }
