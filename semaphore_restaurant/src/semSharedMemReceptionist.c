@@ -116,7 +116,7 @@ int main (int argc, char *argv[])
        groupRecord[g] = TOARRIVE;
     }
 
-    /* simulation of the life cycle of the receptionist -> -> Indica o que o Receptionist vai fazer */
+    /* simulation of the life cycle of the receptionist -> Indica o que o Receptionist vai fazer */
     int nReq = 0;
     request req;
     /* Enquanto o nº de requests for inferior ao máximo de requests possível para o Receptionist, executa este loop */
@@ -132,7 +132,8 @@ int main (int argc, char *argv[])
                    receivePayment(req.reqGroup);
                    break;
         }
-        nReq++; // Incrementa o nº de pedidos
+        /* Incrementa o nº de pedidos */
+        nReq++; 
     }
 
     /* unmapping the shared region off the process address space */
@@ -153,15 +154,14 @@ int main (int argc, char *argv[])
  */
 static int decideTableOrWait(int n) // Este método é chamado entre semáforos mutex, logo pode aceder à região partilhada sem problemas
 {   
-    //TODO insert your code here
-
     /* 
         Sabe-se que, se um grupo não está a ocupar nenhuma mesa, o valor do índice que corresponde ao seu id no array 
         'sh->fSt.assignedTable' é -1 (ver main() em 'probSemSharedMemRestaurant.c') 
     */
     int mesa0 = 1;                                  // Mesa 0 inicialmente disponível
     int mesa1 = 1;                                  // Mesa 1 inicialmente disponível
-    for (int group = 0; group < sh->fSt.nGroups; group++) { // Percorreu-se o array tal como é feito na main() acima
+    /* Percorreu-se o array tal como é feito na main() acima */
+    for (int group = 0; group < sh->fSt.nGroups; group++) { 
         if (sh->fSt.assignedTable[group] == 0) {
             mesa0 = 0; // Se a condição for verdadeira, significa que a mesa 0 não está disponível
         }
@@ -170,7 +170,7 @@ static int decideTableOrWait(int n) // Este método é chamado entre semáforos 
         }
     }    
 
-    /* Agora tem de se verificar qual é que pode ser atribuída (se ambas tiverem sido assinaladas como ocupadas, retorna-se -1) */
+    /* Agora, tem de se verificar qual é que pode ser atribuída (se ambas tiverem sido assinaladas como ocupadas, retorna-se -1) */
     if (mesa0)
         return 0;
     else if(mesa1)
@@ -185,14 +185,12 @@ static int decideTableOrWait(int n) // Este método é chamado entre semáforos 
  *
  *  Checks current state of tables and groups in order to decide group.
  *
- *  \return group id or -1 (in case of wait decision) ??????????????????? Não seria "in case of no group waiting"
+ *  \return group id or -1 (in case of wait decision) -> Não seria "in case of no group waiting"
  */
 static int decideNextGroup() // Este método é chamado entre semáforos mutex, logo pode aceder à região partilhada sem problemas
 {
-    //TODO insert your code here
-
     /* O ciclo seguinte encontra um grupo em espera e retorna o seu id, se existir algum */
-    for (int group = 0; group < MAXGROUPS; group++) {
+    for (int group = 0; group < sh->fSt.nGroups; group++) {
         if (groupRecord[group] == WAIT) {
             return group;
         }
@@ -214,66 +212,61 @@ static request waitForGroup()
 {
     request ret; 
 
-    if (semDown (semgid, sh->mutex) == -1)  {                                                  /* enter critical region */
+    // ------------------------------ [Região crítica] ------------------------------ //
+    if (semDown (semgid, sh->mutex) == -1)  {                /* enter critical region */
         perror ("error on the up operation for semaphore access (WT)");
         exit (EXIT_FAILURE);
     }
-
-    // TODO insert your code here
     
-    /* O Receptionist atualiza o seu estado para "à espera de pedido de um Grupo" */
+    /* O Receptionist atualiza e salva o seu estado para "à espera de pedido de um Grupo" */
     sh->fSt.st.receptionistStat = WAIT_FOR_REQUEST;
     saveState(nFic, &sh->fSt);
     
-    if (semUp (semgid, sh->mutex) == -1)      {                                             /* exit critical region */
+    if (semUp (semgid, sh->mutex) == -1) {                    /* exit critical region */
         perror ("error on the down operation for semaphore access (WT)");
         exit (EXIT_FAILURE);
     }
+    // ------------------------------------------------------------------------------ //
 
-
-
-    // TODO insert your code here
-
-    /* Depois de atualizar o estado, o Receptionist tem de ficar à espera que o Grupo lhe peça alguma coisa */
+    /* 
+        Depois de atualizar o estado, o Receptionist tem de ficar à espera que o Grupo 
+        lhe peça alguma coisa 
+    */
     if (semDown(semgid, sh->receptionistReq) == -1) {                                                
         perror ("error on the down operation for semaphore access (CT)");
         exit (EXIT_FAILURE);
     }
-    /* Assim que conseguir fazer semDown, significa que pode aceder à zona crítica para ler o pedido que o Grupo lá colocou */
+    /* 
+        Assim que conseguir fazer semDown, significa que pode aceder à zona crítica 
+        para ler o pedido que o Grupo lá colocou 
+    */
 
-
-
-    if (semDown (semgid, sh->mutex) == -1)  {                                                  /* enter critical region */
+    // ------------------------------ [Região crítica] ------------------------------ //
+    if (semDown (semgid, sh->mutex) == -1)  {                /* enter critical region */
         perror ("error on the up operation for semaphore access (WT)");
         exit (EXIT_FAILURE);
     }
 
-    // TODO insert your code here
-    
     /* Agora que o Grupo colocou o pedido na memória partilhada, o Receptionist pode lê-lo */
     ret = sh->fSt.receptionistRequest;
 
-    if (semUp (semgid, sh->mutex) == -1) {                                                  /* exit critical region */
+    if (semUp (semgid, sh->mutex) == -1) {                    /* exit critical region */
      perror ("error on the down operation for semaphore access (WT)");
         exit (EXIT_FAILURE);
     }
-
-
-
-    // TODO insert your code here
+    // ------------------------------------------------------------------------------ //
     
     /* 
-        O Rececionista avisa que, depois de atender ao pedido lido acima, fica disponível logo a seguir para outro (visto que, 
-        tal como em Waiter, as tarefas são executadasde forma sequencial) 
+        O Rececionista avisa que, depois de atender ao pedido lido acima, fica disponível logo 
+        a seguir para outro (visto que, tal como em Waiter, as tarefas são executadas de forma sequencial) 
     */
     if (semUp(semgid, sh->receptionistRequestPossible) == -1) {                                                
         perror ("error on the down operation for semaphore access (CT)");
         exit (EXIT_FAILURE);
     }
 
-
+    /* Devolve-se o pedido para o usar na main() */
     return ret;
-
 }
          
 
@@ -288,33 +281,31 @@ static request waitForGroup()
  */
 static void provideTableOrWaitingRoom (int n)
 {
-    
-    if (semDown (semgid, sh->mutex) == -1)  {                                                  /* enter critical region */
+    // ------------------------------ [Região crítica] ------------------------------ //
+    if (semDown (semgid, sh->mutex) == -1)  {                /* enter critical region */
         perror ("error on the up operation for semaphore access (WT)");
         exit (EXIT_FAILURE);
     }
 
-    /* Receptionist atualiza o seu estado para "a atribuir mesa ao grupo n" */
+    /* O Receptionist atualiza o seu estado para "a atribuir mesa ao grupo n" */
     sh->fSt.st.receptionistStat = ASSIGNTABLE;
-    saveState(nFic, &sh->fSt);
 
-    // TODO insert your code here
-
-    /* Verifica-se se existe alguma mesa disponível */
+    /* Verifica-se se existe alguma mesa disponível (ver função 'decideTableOrWait()', explicada acima) */
     int mesa = decideTableOrWait(n);
     if (mesa == -1) {
         /* 
             Se ambas as mesas estiverem ocupadas, o Receptionist atualiza o seu groupRecord do Grupo 'n' 
             para "esperar", e o nº de grupos à espera aumenta. Como o Grupo já se encontrava à espera de 
-            uma mesa (fazendo semDown de waitForTable[]), então aqui não se faz nada relativamente a isso.
+            uma mesa (fazendo semDown de waitForTable[]), então aqui não se faz nada relativamente 
+            a isso, i.e., ele continua à espera.
         */
         groupRecord[n] = WAIT;
         sh->fSt.groupsWaiting++;
-        //saveState(nFic, &sh->fSt);
     } else {
         /*  
             Se houver alguma mesa disponível, então este grupo fica com ela e o Receptionist avisa-o de que podem 
-            entrar para a mesa (semUp), atualizando, também, o seu groupRecord (não é necessário decrementar 'sh->fSt.groupsWaiting')
+            entrar para a mesa (semUp), atualizando, também, o seu groupRecord (não é necessário decrementar 
+            'sh->fSt.groupsWaiting')
         */
         sh->fSt.assignedTable[n] = mesa;
         groupRecord[n] = ATTABLE;
@@ -323,15 +314,15 @@ static void provideTableOrWaitingRoom (int n)
             exit (EXIT_FAILURE);
         }
     }
+
+    /* Salvam-se as alterações feitas */
     saveState(nFic, &sh->fSt);
     
-    if (semUp (semgid, sh->mutex) == -1) {                                               /* exit critical region */
+    if (semUp (semgid, sh->mutex) == -1) {                    /* exit critical region */
         perror ("error on the down operation for semaphore access (WT)");
         exit (EXIT_FAILURE);
     }
-
-    
-
+    // ------------------------------------------------------------------------------ //
 }
 
 /**
@@ -346,51 +337,51 @@ static void provideTableOrWaitingRoom (int n)
 
 static void receivePayment (int n)
 {
-    if (semDown (semgid, sh->mutex) == -1)  {                                                  /* enter critical region */
+    // ------------------------------ [Região crítica] ------------------------------ //
+    if (semDown (semgid, sh->mutex) == -1)  {                /* enter critical region */
         perror ("error on the up operation for semaphore access (WT)");
         exit (EXIT_FAILURE);
     }
 
     /* O Receptionist atualiza o seu estado para "a receber o pagamento" */
     sh->fSt.st.receptionistStat = RECVPAY;
-    saveState(nFic, &sh->fSt);
-
+    
     /* 
-        Esta variável serve para saber qual é a mesa em que o Grupo se encontra, para depois ser usada no Receptionist 
-        acknowledge de que o pagamento está feito, e ainda para ser atribuída a algum grupo que esteja em espera 
+        Esta variável (assignedTable) serve para saber qual é a mesa em que o Grupo se 
+        encontra, para depois ser usada no Receptionist acknowledge de que o pagamento 
+        está feito, e ainda para ser atribuída a algum grupo que esteja em espera 
     */
     int assignedTable = sh->fSt.assignedTable[n];
 
     /* O Receptionist atualiza o estado da mesa, dizendo que já se encontra disponível */
     sh->fSt.assignedTable[n] = -1;
-    //saveState(nFic, &sh->fSt);
 
     /* Verifica-se se ainda existem grupos à espera */
     int nextGroup = decideNextGroup();
 
-    /* E, se existirem, atribui-se ao próximo Grupo a mesa que acabou de ser disponibilizada, e diminui-se o nº de grupos à espera */
+    /* E, se existirem: */
     if (nextGroup != -1) {
+        /* Atribui-se ao próximo Grupo a mesa que acabou de ser disponibilizada */
         sh->fSt.assignedTable[nextGroup] = assignedTable;
-        /* Avisar o grupo que podem ir para a mesa (podem deixar de esperar pela mesa) */
+        /* Avisa-se o grupo que podem ir para a mesa (podem deixar de esperar pela mesa) */
         if (semUp(semgid, sh->waitForTable[nextGroup]) == -1) {                                         
             perror ("error on the down operation for semaphore access (WT)");
             exit (EXIT_FAILURE);
         }
+        /* Atualiza-se o groupRecord deste grupo para ATTABLE */
         groupRecord[nextGroup] = ATTABLE;
+        /* E decrementa-se a variável que contém o nº de grupos à espera de mesa */
         sh->fSt.groupsWaiting--;
     }
+
+    /* No final, salvam-se e escrevem-se as alterações efetuadas (logging.c) */
     saveState(nFic, &sh->fSt);
 
-    // TODO insert your code here
-
-    if (semUp (semgid, sh->mutex) == -1)  {                                                  /* exit critical region */
+    if (semUp (semgid, sh->mutex) == -1)  {                   /* exit critical region */
      perror ("error on the down operation for semaphore access (WT)");
         exit (EXIT_FAILURE);
     }
-
-
-
-    // TODO insert your code here
+    // ------------------------------------------------------------------------------ // 
 
     /* Aqui, confirma ao Grupo que pagou que o pagamento foi bem sucedido */
     if (semUp(semgid, sh->tableDone[assignedTable]) == -1) {                                         
@@ -398,11 +389,7 @@ static void receivePayment (int n)
         exit (EXIT_FAILURE);
     }
 
-    /* O Receptionist atualiza o seu groupRecord do grupo 'n' para "feito" */
+    /* Finalmente, o Receptionist atualiza o seu groupRecord do grupo 'n' para "feito" */
     groupRecord[n] = DONE;
-
-
-
-
 }
 

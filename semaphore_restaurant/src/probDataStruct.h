@@ -49,7 +49,7 @@ typedef struct {
  */
 typedef struct
 {   /** \brief state of all intervening entities */
-    STAT st; // dentro deste temos os estados todos
+    STAT st;
 
     /** \brief number of groups */
     int nGroups;
@@ -74,7 +74,7 @@ typedef struct
     request receptionistRequest;
 
     /** \brief used by groups and chef to store request to waiter */
-    request waiterRequest; // Antes de acordar o waiter, colocam aqui o pedido para o waiter
+    request waiterRequest; 
 
 
 } FULL_STAT;

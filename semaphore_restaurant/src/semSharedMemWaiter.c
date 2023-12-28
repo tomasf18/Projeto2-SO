@@ -104,7 +104,7 @@ int main (int argc, char *argv[])
     int nReq = 0;
     request req;
     /* Enquanto o nº de requests for inferior ao máximo de requests possível para o Waiter, executa este loop */
-    while( nReq < sh->fSt.nGroups*2 ) {     // nGroups (5) * 2 (requests feitos por Groups e requests feitos por Chef, a cada pedido do Grupo, existe uma resposta do Chef) = nTotalRequests
+    while( nReq < sh->fSt.nGroups*2 ) {     // nGroups (5) * 2 (requests feitos por Groups e requests feitos por Chef; a cada pedido do Grupo, existe uma resposta do Chef) = nTotalRequests
         req = waitForClientOrChef();        // Waiter anota o pedido do Grupo/Chef
         switch(req.reqType) {
             /* Se for o Grupo a fazer um pedido de refeição, então vai informar o Chef */
@@ -116,7 +116,8 @@ int main (int argc, char *argv[])
                    takeFoodToTable(req.reqGroup); // Leva a comida para a mesa onde está o grupo indicado como argumento
                    break;
         }
-        nReq++; // Incrementa o nº de pedidos
+        /* Incrementa o nº de pedidos */
+        nReq++; 
     }
 
     /* unmapping the shared region off the process address space */
@@ -141,39 +142,47 @@ static request waitForClientOrChef()
 {
     request req; 
 
-
-
-    if (semDown (semgid, sh->mutex) == -1)  {                                                  /* enter critical region */
+    // ------------------------------ [Região crítica] ------------------------------ //
+    if (semDown (semgid, sh->mutex) == -1)  {                /* enter critical region */
         perror ("error on the up operation for semaphore access (WT)");
         exit (EXIT_FAILURE);
     }
 
-    /* Waiter atualiza o seu estado para "à espera de um pedido" (de um Grupo para fazer um pedido ou do Chef para levar a comida à mesa) */
+    /* 
+        O Waiter atualiza o seu estado para "à espera de um pedido" (de um Grupo para fazer 
+        um pedido, ou do Chef para levar a comida à mesa) 
+    */
     sh->fSt.st.waiterStat = WAIT_FOR_REQUEST;
+
+    /* Salva-se o estado interno */
     saveState(nFic, &sh->fSt);
     
-    if (semUp (semgid, sh->mutex) == -1)      {                                             /* exit critical region */
+    if (semUp (semgid, sh->mutex) == -1)      {               /* exit critical region */
         perror ("error on the down operation for semaphore access (WT)");
         exit (EXIT_FAILURE);
     }
-
+    // ------------------------------------------------------------------------------ //
    
-
     /*
-        O Waiter precisa de ficar à espera de que um pedido seja feito, para depois poder aceder-lhe na região crítica.
-        Isto é, o pedido "request" (da estrutura "request" da memória partilhada) vai ser atualizado na memória partilhada por Group 
-        ou por Chef, e depois, quando fizerem Up do semáforo abaixo, dizendo que já la colocaram o pedido e que a região crítica está livre, o Waiter poderá lê-lo
+        O Waiter precisa de ficar à espera de que um pedido seja feito, para depois poder 
+        aceder-lhe na região crítica. Isto é, o pedido "request" (da estrutura "request" da 
+        memória partilhada) vai ser atualizado na memória partilhada por Group ou por Chef, 
+        e depois, quando fizerem Up do semáforo abaixo, dizendo que já lá colocaram o pedido 
+        e que a região crítica está livre, o Waiter poderá lê-lo
     */
     if (semDown(semgid, sh->waiterRequest) == -1)      {                                             
         perror ("error on the down operation for semaphore access (WT)");
         exit (EXIT_FAILURE);
     }
 
-    /* Neste momento, quando Waiter consegue fazer semDown, significa que o pedido já foi colocado na região partilhada da memória */
+    /* 
+        Nesta linha, quando Waiter consegue fazer semDown, significa que o pedido já foi 
+        colocado na região partilhada da memória 
+    */
 
 
-
-    if (semDown (semgid, sh->mutex) == -1)  {                                                  /* enter critical region */
+    // ------------------------------ [Região crítica] ------------------------------ //
+    if (semDown (semgid, sh->mutex) == -1)  {                /* enter critical region */
         perror ("error on the up operation for semaphore access (WT)");
         exit (EXIT_FAILURE);
     }
@@ -181,17 +190,19 @@ static request waitForClientOrChef()
     /* Então, o Waiter lê o pedido que foi colocado por Group ou Chef na região crítica */
     req = sh->fSt.waiterRequest;
 
-    if (semUp(semgid, sh->mutex) == -1) {                                                  /* exit critical region */
+    if (semUp(semgid, sh->mutex) == -1) {                     /* exit critical region */
         perror ("error on the down operation for semaphore access (WT)");
         exit (EXIT_FAILURE);
     }
-
+    // ------------------------------------------------------------------------------ //
 
     /* 
-        Agora, depois de ler o pedido acima, e de estar já a exeutar o mesmo, o Waiter avisa que está disponível para novos 
-        pedidos (pois, segundo a main(), a entidade executa tudo de forma sequencial: 
-        Recebe o Pedido do Chef/Grupo -> Leva o Pedido ao Grupo/Chef -> Recebe Outro Pedido, ou seja, assim que anota o pedido
-        de um, podemos já fazê-lo dar Up do semáforo para outro poder pedir, sendo que o anterior já está a ser executado.) 
+        Agora, depois de ler o pedido acima, e de estar já a exeutar o mesmo, o Waiter 
+        avisa que está disponível para novos pedidos (pois, segundo a main(), a entidade 
+        executa tudo de forma sequencial: 
+            Recebe o Pedido do Chef/Grupo -> Leva o Pedido ao Grupo/Chef -> Recebe Outro Pedido
+        Ou seja, assim que anota o pedido de um, podemos já fazê-lo dar Up do semáforo para outro 
+        poder pedir, sendo que o anterior já está a ser executado.) 
     */
     if (semUp(semgid, sh->waiterRequestPossible) == -1)      {                                             
         perror ("error on the down operation for semaphore access (WT)");
@@ -212,28 +223,36 @@ static request waitForClientOrChef()
  */
 static void informChef (int n)
 {
-    if (semDown (semgid, sh->mutex) == -1)  {                                                  /* enter critical region */
+    // ------------------------------ [Região crítica] ------------------------------ //
+    if (semDown (semgid, sh->mutex) == -1)  {                /* enter critical region */
         perror ("error on the up operation for semaphore access (WT)");
         exit (EXIT_FAILURE);
     }
 
     /* O Waiter atualiza o seu estado para "a ir informar Chef sobre o pedido do Grupo 'n'" */
     sh->fSt.st.waiterStat = INFORM_CHEF;
-    saveState(nFic, &sh->fSt);
 
-    /* O Waiter indica ao Chef que existe um pedido pendente e indica o grupo que o fez, acedendo à memória partilhada para o fazer */
+    /* 
+        O Waiter indica ao Chef que existe um pedido pendente e indica o grupo que o fez, 
+        acedendo à memória partilhada para o fazer 
+    */
     sh->fSt.foodOrder = 1;
     sh->fSt.foodGroup = n;
 
-    /* Aqui, o Waiter obtém a mesa que foi dada ao grupo n, para depois poder dar o acknowledge respetivo ao Grupo, sobre ter anotado o pedido */
+    /* 
+        Aqui, o Waiter obtém a mesa que foi dada ao grupo n, para depois poder dar o acknowledge 
+        respetivo ao Grupo, sobre ter anotado o pedido 
+    */
     int assignedTable = sh->fSt.assignedTable[n];
     
-    if (semUp (semgid, sh->mutex) == -1)                                                   /* exit critical region */
+    /* Salva-se o estado interno */
+    saveState(nFic, &sh->fSt);
+
+    if (semUp (semgid, sh->mutex) == -1)                      /* exit critical region */
     { perror ("error on the down operation for semaphore access (WT)");
         exit (EXIT_FAILURE);
     }
-
-
+    // ------------------------------------------------------------------------------ //
 
     /* O Waiter avisa o Grupo n de que anotou corretamente o seu pedido */
     if (semUp (semgid, sh->requestReceived[assignedTable]) == -1)      {                                             
@@ -241,7 +260,10 @@ static void informChef (int n)
         exit (EXIT_FAILURE);
     } 
 
-    /* O Waiter leva o pedido ao Chef, dizendo-lhe que pode parar de esperar pelo pedido e começar a cozinhar (COOK) */
+    /* 
+        O Waiter leva o pedido ao Chef, dizendo-lhe que pode parar de esperar pelo pedido 
+        e começar a cozinhar (COOK) 
+    */
     if (semUp (semgid, sh->waitOrder) == -1)      {                                             
         perror ("error on the down operation for semaphore access (WT)");
         exit (EXIT_FAILURE);
@@ -252,7 +274,6 @@ static void informChef (int n)
         perror ("error on the down operation for semaphore access (WT)");
         exit (EXIT_FAILURE);
     } 
-
 }
 
 /**
@@ -266,30 +287,37 @@ static void informChef (int n)
 
 static void takeFoodToTable (int n)
 {
-    if (semDown (semgid, sh->mutex) == -1)  {                                                  /* enter critical region */
+    // ------------------------------ [Região crítica] ------------------------------ //
+    if (semDown (semgid, sh->mutex) == -1)  {                /* enter critical region */
         perror ("error on the up operation for semaphore access (WT)");
         exit (EXIT_FAILURE);
     }
 
     /* O Waiter atualiza o seu estado para "a ir levar a comida à mesa do grupo 'n'" */
     sh->fSt.st.waiterStat = TAKE_TO_TABLE;
+
+    /* 
+        Aqui, o Waiter obtém a mesa que foi dada ao grupo n, para depois poder dar o 
+        acknowledge respetivo ao Grupo, sobre a comida ter chegado 
+    */
+    int assignedTable = sh->fSt.assignedTable[n];
+
+    /* Salva-se o estado interno */
     saveState(nFic, &sh->fSt);
 
-    /* Aqui, o Waiter obtém a mesa que foi dada ao grupo n, para depois poder dar o acknowledge respetivo ao Grupo, sobre a comida ter chegado */
-    int assignedTable = sh->fSt.assignedTable[n];
-    
-    if (semUp (semgid, sh->mutex) == -1)  {                                                  /* exit critical region */
+    if (semUp (semgid, sh->mutex) == -1)  {                   /* exit critical region */
         perror ("error on the down operation for semaphore access (WT)");
         exit (EXIT_FAILURE);
     }
+    // ------------------------------------------------------------------------------ //
 
-
-
-    /* O Waiter informa o grupo 'n' que a comida está pronta, e que podem, então começar a comer (EAT) */
+    /* 
+        O Waiter informa o grupo 'n' que a comida está pronta e já chegou, e que podem, 
+        então começar a comer (EAT) 
+    */
     if (semUp(semgid, sh->foodArrived[assignedTable]) == -1)      {                                             
         perror ("error on the down operation for semaphore access (WT)");
         exit (EXIT_FAILURE);
     }     
-
 }
 

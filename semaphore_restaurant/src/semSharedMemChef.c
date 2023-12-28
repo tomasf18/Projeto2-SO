@@ -96,7 +96,7 @@ int main (int argc, char *argv[])
     /* initialize random generator */
     srandom ((unsigned int) getpid ());                                      
 
-    /* simulation of the life cycle of the chef -> Indica o que o Chef vai fazer  */
+    /* simulation of the life cycle of the chef -> Indica o que o Chef vai fazer */
 
     int nOrders = 0;
     /* Enquanto o nº de pedidos de comida (Group Orders) for inferior ao máximo de orders possível para o Chef, executa este loop */
@@ -105,8 +105,8 @@ int main (int argc, char *argv[])
        waitForOrder();
        /* Processa a order recebida acima, isto é, cozinha e entrega o pedido ao Waiter para este levar à mesa respetiva */
        processOrder();
-
-       nOrders++;   // Incrementa o nº de pedidos
+       /* Incrementa o nº de pedidos */
+       nOrders++;
     }
 
     /* unmapping the shared region off the process address space */
@@ -122,9 +122,9 @@ int main (int argc, char *argv[])
 /**
  *  \brief chefs wait for a food order.
  *
- *  The chef waits for the food request that will be provided by the waiter. (waitOrder)
- *  Updates its state and saves internal state. -> (COOK)
- *  Received order should be acknowledged. (orderReceived)
+ *  The chef waits for the food request that will be provided by the waiter. 
+ *  Updates its state and saves internal state. 
+ *  Received order should be acknowledged. 
  */
 static void waitForOrder ()
 {
@@ -135,13 +135,12 @@ static void waitForOrder ()
     }
 
     /* 
-        *Chef recebe o pedido assim que puder dar semDown acima (isto é, assim que Waiter dá semUp a informar que 
-        existe um novo pedido), logo nesta linha já o recebeu* 
+        O Chef recebe o pedido assim que puder dar semDown do semáforo anterior (isto é, assim que Waiter 
+        dá semUp a informar que existe um novo pedido), logo nesta linha já o recebeu* 
     */
 
-     
-
-    if (semDown (semgid, sh->mutex) == -1) {                                                      /* enter critical region */
+    // ------------------------------ [Região crítica] ------------------------------ //
+    if (semDown (semgid, sh->mutex) == -1) {                 /* enter critical region */
         perror ("error on the up operation for semaphore access (PT)");
         exit (EXIT_FAILURE);
     }
@@ -151,24 +150,26 @@ static void waitForOrder ()
         Esta variável será sempre precisa para que depois o Waiter consiga levar o pedido à mesa certa.
     */
     lastGroup = sh->fSt.foodGroup; // 'sh->fSt.foodGroup' tem o grupo associado ao pedido que o Chef recebeu
-
     /* Sendo que já recebeu um novo pedido, então atualiza o seu estado para "a cozinhar" */
     sh->fSt.st.chefStat = COOK;
+    
+    /* Salva-se o estado interno */
     saveState(nFic, &sh->fSt);
 
-    if (semUp (semgid, sh->mutex) == -1) {                                                      /* exit critical region */
+    if (semUp (semgid, sh->mutex) == -1) {                    /* exit critical region */
         perror ("error on the up operation for semaphore access (PT)");
         exit (EXIT_FAILURE);
     }
+    // ------------------------------------------------------------------------------ //
 
-
-
-    /* Aqui, o Chef notifica o Waiter de que recebeu corretamente o pedido, para que o Waiter possa ir de novo à sua vida */
+    /* 
+        Aqui, o Chef notifica o Waiter de que recebeu corretamente o pedido, 
+        para que o Waiter possa ir atender outros pedidos 
+    */
     if (semUp(semgid, sh->orderReceived) == -1) {                                                    
         perror ("error on the up operation for semaphore access (PT)");
         exit (EXIT_FAILURE);
-    }
-       
+    }     
 }
 
 /**
@@ -182,8 +183,9 @@ static void waitForOrder ()
 static void processOrder ()
 {
     /* 
-        Chef começa a cozinhar no final da função waitForOrder() definida 
-        acima, quando passa para o estado COOK, demorando o tempo seguinte a fazê-lo */
+        O Chef começa a cozinhar no final da função waitForOrder() definida 
+        acima, quando passa para o estado COOK, demorando o tempo seguinte a fazê-lo: 
+    */
     usleep((unsigned int) floor ((MAXCOOK * random ()) / RAND_MAX + 100.0));
     /* *O Chef termina de cozinhar* */
 
@@ -194,46 +196,46 @@ static void processOrder ()
     }
 
     /* 
-        *Waiter fica disponível assim que Chef puder dar semDown ao semáforo acima (isto porque o 
+        O Waiter fica disponível assim que Chef puder dar semDown ao semáforo acima (isto porque o 
         Waiter dá semUp quando se encontra disponível para ouvir novos pedidos), logo, nesta linha, 
-        o Chef já pode pedir ao Waiter para levar a comida à mesa* 
+        o Chef já pode pedir ao Waiter para levar a comida à mesa*
     */
 
-
-
-    if (semDown (semgid, sh->mutex) == -1) {                                                      /* enter critical region */
+   // ------------------------------ [Região crítica] ------------------------------ //
+    if (semDown (semgid, sh->mutex) == -1) {                                  /* enter critical region */
         perror ("error on the up operation for semaphore access (PT)");
         exit (EXIT_FAILURE);
     }
 
     /* 
-        Sendo que acima, a variável 'lastGroup' foi usada para armazenar o id do grupo que fez o pedido, aqui vai-se certificar
-        de que o pedido vai ser entregue pelo Waiter ao grupo certo (função main()->takeFoodToTable() do Waiter), passando 
-        para a memória partilhada ('sh->fSt.waiterRequest.reqGroup' e 'sh->fSt.waiterRequest.reqType') tanto o id do grupo, 
+        Sendo que, acima, a variável 'lastGroup' foi usada para armazenar o ID do grupo que fez o pedido, 
+        aqui vai-se certificar de que o pedido vai ser entregue pelo Waiter ao grupo certo, que tem esse ID 
+        (função main()->takeFoodToTable() do Waiter), passando para a memória partilhada 
+        ('sh->fSt.waiterRequest.reqGroup' e 'sh->fSt.waiterRequest.reqType') tanto o ID desse grupo, 
         como o tipo de request que o Waiter irá receber do Chef
     */ 
     sh->fSt.waiterRequest.reqGroup = lastGroup; 
     sh->fSt.waiterRequest.reqType = FOODREADY;
 
-    /* Indica que terminou um pedido, passando a variável em memória partilhada de novo para 0 */
+    /* Indica que terminou um pedido, passando a variável/flag em memória partilhada de novo para 0 */
     sh->fSt.foodOrder = 0;
 
     /* Atualiza o seu estado, de novo para "à espera de um novo pedido" */
     sh->fSt.st.chefStat = WAIT_FOR_ORDER;
+
+    /* Salvar as alterações efetuadas em memória partilhada (para imprimi-las corretamente em logging.c) */
     saveState(nFic, &sh->fSt);
 
-    if (semUp (semgid, sh->mutex) == -1) {                                                      /* exit critical region */
+    if (semUp (semgid, sh->mutex) == -1) {                                      /* exit critical region */
         perror ("error on the up operation for semaphore access (PT)");
         exit (EXIT_FAILURE);
     }
-
-
+    // ------------------------------------------------------------------------------ //
     
     /* Por fim, o Chef informa o Waiter de que pode obter o pedido pronto e levá-lo */
     if (semUp(semgid, sh->waiterRequest) == -1) {                                                      
         perror ("error on the up operation for semaphore access (PT)");
         exit (EXIT_FAILURE);
     }
-    
 }
 

@@ -25,7 +25,7 @@
 /** \brief controls eat time standard deviation */
 #define  EATDEV           4 
 
-// IDs dos diferentes tipos de requests
+/* IDs dos diferentes tipos possíveis de requests */ 
 /** \brief id of table request (group->receptionist) */
 #define TABLEREQ   1
 /** \brief id of bill request (group->receptionist) */
@@ -37,7 +37,6 @@
 
 
 /* Client state constants */
-// Estados dos clientes
 /** \brief group initial state (go to restaurant) */
 #define  GOTOREST          1
 /** \brief client is waiting at reception or waiting for table */
@@ -55,7 +54,6 @@
 
 
 /* Chef state constants */
-// Estados dos cozinheiros
 /** \brief chef waits for food order */
 #define  WAIT_FOR_ORDER    0
 /** \brief chef is cooking */
@@ -65,7 +63,6 @@
 
 
 /* Waiter state constants */
-// Estados do empregado
 /** \brief waiter waits for food request */
 #define  WAIT_FOR_REQUEST   0
 /** \brief waiter takes food request to chef */
@@ -75,12 +72,13 @@
 
 
 /* Receptionist state constants */
-// Estados do rececionista
-/** \brief waiter waits for food request */
-#define  WAIT_FOR_REQUEST   0 // NOTÁMOS A FALTA DESTE ESTADO
-/** \brief waiter waits for food request ?????????????????????????????*/ 
+/* ------------- Notámos a falta do seguinte estado: ------------- */
+/** \brief receptionist waits for food request */
+#define  WAIT_FOR_REQUEST   0 
+/* --------------------------------------------------------------- */
+/** \brief waiter waits for food request */     // Não é "waiter", mas sim "receptionist" 
 #define  ASSIGNTABLE        1
-/** \brief waiter reiceives payment ??????????????????????*/
+/** \brief waiter reiceives payment */          // Não é "waiter", mas sim "receptionist" 
 #define  RECVPAY            2
 
 
