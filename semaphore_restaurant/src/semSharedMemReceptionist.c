@@ -290,6 +290,9 @@ static void provideTableOrWaitingRoom (int n)
     /* O Receptionist atualiza o seu estado para "a atribuir mesa ao grupo n" */
     sh->fSt.st.receptionistStat = ASSIGNTABLE;
 
+    /* Salvam-se as alterações feitas ao estado */
+    saveState(nFic, &sh->fSt);
+
     /* Verifica-se se existe alguma mesa disponível (ver função 'decideTableOrWait()', explicada acima) */
     int mesa = decideTableOrWait(n);
     if (mesa == -1) {
@@ -314,9 +317,6 @@ static void provideTableOrWaitingRoom (int n)
             exit (EXIT_FAILURE);
         }
     }
-
-    /* Salvam-se as alterações feitas */
-    saveState(nFic, &sh->fSt);
     
     if (semUp (semgid, sh->mutex) == -1) {                    /* exit critical region */
         perror ("error on the down operation for semaphore access (WT)");
@@ -345,6 +345,9 @@ static void receivePayment (int n)
 
     /* O Receptionist atualiza o seu estado para "a receber o pagamento" */
     sh->fSt.st.receptionistStat = RECVPAY;
+
+    /* Salvam-se e escrevem-se as alterações efetuadas ao estado (logging.c) */
+    saveState(nFic, &sh->fSt);
     
     /* 
         Esta variável (assignedTable) serve para saber qual é a mesa em que o Grupo se 
@@ -373,9 +376,6 @@ static void receivePayment (int n)
         /* E decrementa-se a variável que contém o nº de grupos à espera de mesa */
         sh->fSt.groupsWaiting--;
     }
-
-    /* No final, salvam-se e escrevem-se as alterações efetuadas (logging.c) */
-    saveState(nFic, &sh->fSt);
 
     if (semUp (semgid, sh->mutex) == -1)  {                   /* exit critical region */
      perror ("error on the down operation for semaphore access (WT)");
