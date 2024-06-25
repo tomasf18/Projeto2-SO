@@ -3,7 +3,7 @@
 ## Departamento de Electrónica, Telecomunicações e Informática da Universidade de Aveiro
 Curso: Licenciatura em Engenharia Informática  
 Cadeira: Sistemas Operativos  
-Ano Letivo: 2023/2024 — 1º ano, 1º Semestre  
+Ano Letivo: 2023/2024 — 2º ano, 1º Semestre  
 `Nota: 20.0`
 
 ## Objetivo
