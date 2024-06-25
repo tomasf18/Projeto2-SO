@@ -1,9 +1,10 @@
 # Trabalho Prático 2 - Restaurante
 
 ## Departamento de Electrónica, Telecomunicações e Informática da Universidade de Aveiro
-Curso: Licenciatura em Engenharia Informática
-Cadeira: Sistemas Operativos
-Ano Letivo: 2023/2024 — 1º ano, 1º Semestre
+Curso: Licenciatura em Engenharia Informática  
+Cadeira: Sistemas Operativos  
+Ano Letivo: 2023/2024 — 1º ano, 1º Semestre  
+`Nota: 20`
 
 ## Objetivo
 
